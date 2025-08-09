@@ -662,7 +662,7 @@
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFwYnJtbWdndmF0d2pzeXFpbXZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ3NDA5NzMsImV4cCI6MjA3MDMxNjk3M30.Ogdlhks8JjpBVUGttkjJvh0Rl044WugHTSWAL3fDyDo';
 
   // Initialize Supabase client
-  const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   // DOM elements
   const nameInput = document.getElementById('name');
@@ -760,3 +760,4 @@
 </body>
 
 </html>
+
