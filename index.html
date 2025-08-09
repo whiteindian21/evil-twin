@@ -655,13 +655,14 @@
         </footer>
     </div>
     
-   <script>
-  // Supabase configuration - replace with your own
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/supabase.min.js"></script>
+<script>
+  // Supabase config
   const SUPABASE_URL = 'https://apbrmmggvatwjsyqimvl.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFwYnJtbWdndmF0d2pzeXFpbXZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ3NDA5NzMsImV4cCI6MjA3MDMxNjk3M30.Ogdlhks8JjpBVUGttkjJvh0Rl044WugHTSWAL3fDyDo';
 
   // Initialize Supabase client
-  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   // DOM elements
   const nameInput = document.getElementById('name');
@@ -681,7 +682,6 @@
   anotherBtn.addEventListener('click', resetForm);
   tweetBtn.addEventListener('click', tweetResult);
 
-  // Main function to generate evil twin
   async function generateEvilTwin() {
     const name = nameInput.value.trim();
     const interests = interestsInput.value.trim();
@@ -691,16 +691,24 @@
       return;
     }
 
-    // Show loading, hide other sections
     loadingSection.style.display = 'block';
     inputSection.style.display = 'none';
     resultSection.style.display = 'none';
     errorMessage.style.display = 'none';
 
     try {
-      // Call ONE Supabase Edge Function that returns story + imageUrl
+      // Get current session to retrieve access token
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session?.access_token) {
+        throw new Error("User not authenticated. Please log in.");
+      }
+
       const response = await supabase.functions.invoke('evil-twin-generate', {
         body: JSON.stringify({ name, interests }),
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          "Content-Type": "application/json",
+        }
       });
 
       if (response.error) throw response.error;
@@ -710,62 +718,36 @@
       storyText.innerHTML = story.replace(/\n/g, '<br>');
       generatedImage.src = imageUrl;
 
-      // Add a fade-in effect for the image
-      generatedImage.onload = function() {
-        this.style.opacity = "1";
+      generatedImage.onload = () => {
+        generatedImage.style.opacity = "1";
       };
       generatedImage.style.opacity = "0";
 
-      // Save to Supabase (optional if your Edge Function already does this)
-      await saveToSupabase(name, interests, story, imageUrl);
-
-      // Show results
       loadingSection.style.display = 'none';
       resultSection.style.display = 'block';
+
     } catch (error) {
       console.error('Error:', error);
-      showError("Oops! The multiverse is acting up. Please try again!");
+      showError(error.message || "Oops! The multiverse is acting up. Please try again!");
       loadingSection.style.display = 'none';
       inputSection.style.display = 'block';
     }
   }
 
-  // Function to save data to Supabase table 'evil_twins'
-  async function saveToSupabase(name, interests, story, imageUrl) {
-    const { error } = await supabase
-      .from('evil_twins')
-      .insert([
-        {
-          name: name,
-          interests: interests || null,
-          story: story,
-          image_url: imageUrl,
-          created_at: new Date().toISOString()
-        }
-      ]);
-
-    if (error) {
-      console.error('Supabase insert error:', error);
-      // Continue even if saving fails to not break user experience
-    }
-  }
-
-  // Function to reset the form
   function resetForm() {
     nameInput.value = '';
     interestsInput.value = '';
     resultSection.style.display = 'none';
     inputSection.style.display = 'block';
     generatedImage.style.opacity = "0";
+    errorMessage.style.display = 'none';
   }
 
-  // Function to show error message
   function showError(message) {
     errorMessage.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${message}`;
     errorMessage.style.display = 'block';
   }
 
-  // Function to tweet the result
   function tweetResult() {
     const story = storyText.innerText || storyText.textContent;
     const tweetText = `Check out what my evil twin is up to! ${story.substring(0, 200)}... #EvilTwinGenerator`;
@@ -776,4 +758,5 @@
 </script>
 
 </body>
+
 </html>
